@@ -1,18 +1,36 @@
 import { randomElement } from './random';
 
-
 export interface Speech {
     speak(phrase: string, context: object): void;
     speakRandomPhrase(phrases: string[], context: object): void;
 }
 
-
 export class BrowserSpeech implements Speech {
-    // TODO voice selection
+    voices: SpeechSynthesisVoice[] = [];
+
+    constructor() {
+        this.loadVoices();
+        window.speechSynthesis.onvoiceschanged = () => this.loadVoices();
+    }
+
+    loadVoices() {
+        this.voices = speechSynthesis.getVoices();
+    }
+
+    getFeminineVoice(): SpeechSynthesisVoice | null {
+        const feminineVoices = this.voices.filter(voice => 
+            voice.name.toLowerCase().includes('female') || 
+            voice.name.toLowerCase().includes('woman')
+        );
+        return feminineVoices.length > 0 ? feminineVoices[0] : null;
+    }
 
     speak(phrase: string, context: object) {
-        // TODO render template
         const utter = new SpeechSynthesisUtterance(phrase);
+        const feminineVoice = this.getFeminineVoice();
+        if (feminineVoice) {
+            utter.voice = feminineVoice;
+        }
         speechSynthesis.speak(utter);
     }
 
@@ -22,7 +40,6 @@ export class BrowserSpeech implements Speech {
     }
 }
 
-
 export class MockSpeech {
     transcript: string[] = [];
 
@@ -31,7 +48,6 @@ export class MockSpeech {
     }
 
     speak(phrase: string, context: object) {
-        // TODO render template
         this.transcript.push(phrase);
     }
 
@@ -39,12 +55,10 @@ export class MockSpeech {
         if (phrases.length === 0) {
             return;
         }
-
         const phrase = randomElement(phrases);
         this.speak(phrase, context);
     }
 }
-
 
 export default function getSpeech(env: string = process.env.NODE_ENV!): Speech {
     if (env === 'test') {
